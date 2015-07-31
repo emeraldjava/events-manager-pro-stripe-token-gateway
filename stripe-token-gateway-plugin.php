@@ -4,6 +4,7 @@ Plugin Name: Events Manager Pro - Stripe Token Gateway
 Plugin URI: https://github.com/emeraldjava/events-manager-pro-stripe-token-gateway
 Description: Events Manager Pro plugin to handle Stripe Payment using a token.
 Version: 1.0
+Date:    2015-08-31
 Author: emeraldjava
 Author URI: https://github.com/emeraldjava
 */
