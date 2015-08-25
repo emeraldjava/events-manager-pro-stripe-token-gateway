@@ -1,10 +1,11 @@
-<p class="em-bookings-form-gateway-cardno">
+<div class="form-row">
     <label><?php _e('Card Number', 'em-pro'); ?></label>
-    <input type="text" size="15" name="stripe_card_num" value="" class="input"/>
-</p>
-<p class="em-bookings-form-gateway-expiry">
+    <input type="text" size="15" value="4242424242424242" class="input" data-stripe="number"/>
+</div>
+<div class="form-row">
     <label><?php _e('Expiration Date', 'em-pro'); ?></label>
-      <span class="expire_date"><select name="stripe_exp_date_month" style="width:150px; display:inline;">
+      <span class="expire_date" style="width:150px; display:inline;">
+      <select data-stripe="exp-month" size="2" style="width:50px; display:inline;" value="02">
               <?php
               for ($i = 1; $i <= 12; $i++) {
                   $m = $i > 9 ? $i : "0$i";
@@ -12,16 +13,17 @@
               }
               ?>
           </select> /
-      <select name="stripe_exp_date_year" style="width:150px; display:inline;">
+      <select data-stripe="exp-year" size="4" style="width:100px; display:inline;" value="2017">
           <?php
           $year = date('Y', current_time('timestamp'));
-          for ($i = $year; $i <= $year + 10; $i++) {
+          for ($i = $year; $i <= $year + 4; $i++) {
               echo "<option>$i</option>";
           }
           ?>
-      </select></span>
-</p>
-<p class="em-bookings-form-ccv">
+      </select>
+      </span>
+</div>
+<div class="form-row">
     <label><?php _e('CCV', 'em-pro'); ?></label>
-    <input type="text" size="4" name="stripe_card_code" value="" class="input"/>
-</p>
+    <input type="text" size="4" value="100" class="input" data-stripe="cvc"/>
+</div>

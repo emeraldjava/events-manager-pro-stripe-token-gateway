@@ -156,7 +156,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             //Basic Credentials
             \Stripe\Stripe::setApiKey($key);
 
-            $token = $_REQUEST['x_stripeToken'];
+            $token = $_REQUEST['stripeToken'];
             error_log('$token '.$token);
 
             $amount = $EM_Booking->get_price(false, false, true);
@@ -167,7 +167,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $booking_description = preg_replace('/[^a-zA-Z0-9\s]/i', "", $EM_Booking->get_event()->event_name); //clean event name
             $charge = \Stripe\Charge::create(array(
                 "amount" => $amount*100,
-                "currency" => 'eu',//get_option('dbem_bookings_currency', 'USD'),
+                "currency" => 'eur',//get_option('dbem_bookings_currency', 'USD'),
                 "source" => $token,
 //                "metadata" => array("order_id" => $booking_id),
                 "description"=> $booking_description
@@ -218,7 +218,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         } else {
             $key = get_option($this->gateway.'_test_publishable_key');
         }
-        error_log('em_pro_stripe_token_set_publishable_key() '.$key);
+        //error_log('em_pro_stripe_token_set_publishable_key() '.$key);
         echo "<script type='text/javascript'>Stripe.setPublishableKey('$key');</script>";
     }
 
