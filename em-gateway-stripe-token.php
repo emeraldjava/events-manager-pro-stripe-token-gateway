@@ -122,47 +122,61 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
     }
      *
      */
+
+    private function setStripeApiKey() {
+        if (get_option($this->gateway.'_mode') == 'live') {
+            $key = get_option($this->gateway.'_live_secret_key');
+        } else {
+            $key = get_option($this->gateway.'_test_secret_key');
+        }
+        //error_log('key '.$key);
+
+        \Stripe\Stripe::setApiKey($key);
+    }
+
+    /**
+     * https://stripe.com/docs/api?lang=php#create_customer
+     * https://pippinsplugins.com/stripe-integration-part-7-creating-and-storing-customers/
+     */
+    private function getStripeCustomer($bhaa_id,$token,$displayname,$email) {
+        $stripe_customer_id = get_user_meta( $bhaa_id,'stripe_customer_id', true );
+        // if we have no stripe token saved
+        if(!$stripe_customer_id) {
+            // create a new customer if our current user doesn't have one
+            $stripe_customer = \Stripe\Customer::create(array(
+                    'source' => $token,
+                    'description' => $displayname,
+                    'metadata' => array('BHAA_ID'=>$bhaa_id),
+                    'email' => $email
+                )
+            );
+            $stripe_customer_id=$stripe_customer->id;
+            update_user_meta( $bhaa_id, 'stripe_customer_id', $stripe_customer_id );
+        }
+        error_log('getStripeCustomer() '.$bhaa_id.' '.$displayname.' '.$email.' '.$stripe_customer_id);
+        return $stripe_customer_id;
+    }
+
+    /**
+     * https://stripe.com/docs/api?lang=php#create_customer
+     * https://pippinsplugins.com/stripe-integration-part-7-creating-and-storing-customers/
+     */
     private function processStripePayment($EM_Booking) {
         global $EM_Notices;
         global $current_user;
 
-        //$this->__set_api();
+        $this->setStripeApiKey();
 
         /* check if account has customer token already, if not then create one */
-        //get_currentuserinfo();
+        get_currentuserinfo();
         $user_id = $current_user->ID; //logged in user's ID
+        $token = $_REQUEST['stripeToken'];
 
-        //$cc_token = get_user_meta($user_id, 'stripe_customer_token', true);
+        $customerStripeToken = $this->getStripeCustomer($user_id,$token,$current_user->display_name,$current_user->user_email);
 
         try {
 
-
-//            if($this->debug=='yes'){
-//                EM_Pro::log(sprintf( __( 'Credit Card token create', 'emp_stripe' )));
-//            }
-
-            // Email Info
-            //$email_customer = get_option('em_'.$this->gateway.'_header_email_customer',0) ? '1':'0'; //for later
-            //$header_email_receipt = get_option('em_'.$this->gateway.'_header_email_receipt');
-            //$footer_email_receipt = get_option('em_'.$this->gateway.'_footer_email_receipt');
-
-            if (get_option($this->gateway.'_mode') == 'live') {
-                $key = get_option($this->gateway.'_live_secret_key');
-            } else {
-                $key = get_option($this->gateway.'_test_secret_key');
-            }
-            //error_log('key '.$key);
-
-            //Basic Credentials
-            \Stripe\Stripe::setApiKey($key);
-
-            error_log('user_id '.$user_id);
-
-            $token = $_REQUEST['stripeToken'];
-            error_log('$token '.$token);
-
             $amount = $EM_Booking->get_price(false, false, true);
-            //error_log('$amount '.$amount);
 
             //Order Info
             $booking_id = $EM_Booking->booking_id;
@@ -170,13 +184,13 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
 
             // https://stripe.com/docs/api?lang=php#create_charge
             $charge = \Stripe\Charge::create(array(
-                "amount" => $amount*100,
-                "currency" => 'eur',//get_option('dbem_bookings_currency', 'USD'),
-                "source" => $token,
-                "description"=> $booking_description,
-                "metadata" => array("booking_id" => $booking_id, "event_name" => $booking_description),
-                "statement_descriptor" => "BHAA",
-                "receipt_email" => get_userdata($user_id)->user_email
+                'amount' => $amount*100,
+                'currency' => 'eur',//get_option('dbem_bookings_currency', 'USD'),
+                'customer' => $customerStripeToken,
+                'description' => $booking_description,
+                'metadata' => array("booking_id" => $booking_id, "event_name" => $booking_description),
+                'statement_descriptor' => "BHAA",
+                'receipt_email' => get_userdata($user_id)->user_email
             ));
 
 //            if($this->debug=='yes'){
