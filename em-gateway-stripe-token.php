@@ -19,7 +19,6 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
 
     function __construct() {
         parent::__construct();
-        error_log('EM_Gateway_Stripe_Token');
 
         if ($this->is_active()) {
             //Force SSL for booking submissions, since we have card info
@@ -130,7 +129,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         //$this->__set_api();
 
         /* check if account has customer token already, if not then create one */
-        get_currentuserinfo();
+        //get_currentuserinfo();
         $user_id = $current_user->ID; //logged in user's ID
 
         //$cc_token = get_user_meta($user_id, 'stripe_customer_token', true);
@@ -152,25 +151,32 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             } else {
                 $key = get_option($this->gateway.'_test_secret_key');
             }
-            error_log('key '.$key);
+            //error_log('key '.$key);
+
             //Basic Credentials
             \Stripe\Stripe::setApiKey($key);
+
+            error_log('user_id '.$user_id);
 
             $token = $_REQUEST['stripeToken'];
             error_log('$token '.$token);
 
             $amount = $EM_Booking->get_price(false, false, true);
-            error_log('$amount '.$amount);
+            //error_log('$amount '.$amount);
 
             //Order Info
             $booking_id = $EM_Booking->booking_id;
             $booking_description = preg_replace('/[^a-zA-Z0-9\s]/i', "", $EM_Booking->get_event()->event_name); //clean event name
+
+            // https://stripe.com/docs/api?lang=php#create_charge
             $charge = \Stripe\Charge::create(array(
                 "amount" => $amount*100,
                 "currency" => 'eur',//get_option('dbem_bookings_currency', 'USD'),
                 "source" => $token,
-//                "metadata" => array("order_id" => $booking_id),
-                "description"=> $booking_description
+                "description"=> $booking_description,
+                "metadata" => array("booking_id" => $booking_id, "event_name" => $booking_description),
+                "statement_descriptor" => "BHAA",
+                "receipt_email" => get_userdata($user_id)->user_email
             ));
 
 //            if($this->debug=='yes'){
