@@ -26,15 +26,33 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                 || (get_option('em_' . $this->gateway . '_mode') == 'live')
             ) {
                 /* modify booking script, force SSL for all */
-                add_filter('em_wp_localize_script', array($this, 'em_wp_localize_script'), 10, 1);
+                add_filter('em_wp_localize_script', array($this, 'my_em_wp_localize_script'), 10, 1);
                 add_filter('em_booking_form_action_url', array($this, 'force_ssl'), 10, 1);
             }
 
+            error_log('EM_Gateway_Stripe_Token');
             add_action('wp_head',array($this,'em_pro_stripe_token_set_publishable_key'));
             add_action('wp_enqueue_scripts',array($this,'em_pro_stripe_token_enqueue_scripts'));
-
             //add_action('em_gateway_js', array(&$this,'em_gateway_js'));
         }
+    }
+
+    /**
+     * https://wordpress.org/support/topic/em-datepicker-style-overwrites-the-theme-datepicker-style
+     * https://wordpress.org/support/topic/css-conflict-with-wp-fullcalendar-09-10
+     * @param $localized_array
+     * @return mixed
+     */
+    public function em_wp_localize_script($localized_array) {
+        $localized_array['bookingajaxurl'] = $this->force_ssl($localized_array['bookingajaxurl']);
+        if ( ! is_admin() )
+            $localized_array['ajaxurl'] = $this->force_ssl($localized_array['ajaxurl']);
+        return $localized_array;
+    }
+
+    function my_em_wp_localize_script( $vars ){
+        //$vars['ui_css'] = '';
+        return $vars;
     }
 
     public function booking_add($EM_Event,$EM_Booking, $post_validation = false){
@@ -239,7 +257,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $key = get_option($this->gateway.'_test_publishable_key');
         }
         //error_log('em_pro_stripe_token_set_publishable_key() '.$key);
-        echo "<script type='text/javascript'>Stripe.setPublishableKey('$key');</script>";
+        echo "<!-- Stripe --><script type='text/javascript'>Stripe.setPublishableKey('$key');</script>";
     }
 
     /**
@@ -261,10 +279,12 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
 
         wp_register_script(
             'em_pro_stripe_token',
-            plugins_url('js/em_pro_stripe_token.js',__FILE__),
-            array('jquery'),
-            '1.0.0',
-            false);
+            plugins_url('js/em_pro_stripe_token.js',__FILE__)
+            ,array('jquery')
+        );
+////            array('jquery','jquery-ui-datepicker'));
+//            //'1.0.0',
+//            //false);
         wp_enqueue_script('em_pro_stripe_token');
     }
 
