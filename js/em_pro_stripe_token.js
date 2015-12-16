@@ -1,10 +1,9 @@
-/**
- * https://pippinsplugins.com/stripe-integration-part-1-building-the-settings-and-a-simple-payment-form/
- * Add the stripe token to the form
- **/
+(function($) {
 
-
-jQuery(function($) {
+    /**
+     * https://pippinsplugins.com/stripe-integration-part-1-building-the-settings-and-a-simple-payment-form/
+     * Add the stripe token to the form
+     **/
 
     /**
      * Generate the stripe token on form submit
@@ -53,15 +52,15 @@ jQuery(function($) {
         }
     };
 
-});
+    // Stripe.setPublishableKey(stripe_vars.publishable_key);
 
-// Stripe.setPublishableKey(stripe_vars.publishable_key);
+    /**
+     *wp_enqueue_script('stripe-processing', STRIPE_BASE_URL . 'includes/js/stripe-processing.js');
+     wp_localize_script('stripe-processing', 'stripe_vars', array(
+     'publishable_key' => $publishable,
+     )
+     );
+     *
+     */
 
-/**
- *wp_enqueue_script('stripe-processing', STRIPE_BASE_URL . 'includes/js/stripe-processing.js');
-  	wp_localize_script('stripe-processing', 'stripe_vars', array(
-  			'publishable_key' => $publishable,
-  		)
-  	);
- *
- */
+})(jQuery);
