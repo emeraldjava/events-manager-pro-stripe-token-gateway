@@ -4,7 +4,7 @@
  * @package   EM_Gateway_Stripe_Token
  * @author    Paul O'Connell <paul.t.oconnell@gmail.com>
  * @license   GPL-2.0+
- * Date: 16/12/15
+ * Date: 18/12/15
  * Time: 13:34
  */
 require_once('vendor/autoload.php');
@@ -31,8 +31,6 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                 add_filter('em_wp_localize_script', array($this, 'my_em_wp_localize_script'), 10, 1);
                 add_filter('em_booking_form_action_url', array($this, 'force_ssl'), 10, 1);
             }
-
-            error_log('EM_Gateway_Stripe_Token');
             add_action('wp_head',array($this,'em_pro_stripe_token_set_publishable_key'));
             add_action('wp_enqueue_scripts',array($this,'em_pro_stripe_token_enqueue_scripts'));
             //add_action('em_gateway_js', array(&$this,'em_gateway_js'));
@@ -78,7 +76,6 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
     public function em_booking_save($result, $EM_Booking) {
         global $wpdb, $wp_rewrite, $EM_Notices;
 
-        error_log('em_booking_save('.$result.')');
         //make sure booking save was successful before we try anything
         if ($result) {
             if ($EM_Booking->get_price() > 0) {
@@ -117,40 +114,12 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         return $result;
     }
 
-    /**
-     * @param $EM_Booking
-     * @return mixed
-     *  // Get the credit card details submitted by the form
-    $token = $_POST['stripeToken'];
-
-    print_r($_POST);
-    echo 'stripeToken::'.$_POST["stripeToken"];
-
-    \Stripe\Stripe::setApiKey($stripe['secret_key']);
-
-    // Create the charge on Stripe's servers - this will charge the user's card
-    try {
-    $charge = \Stripe\Charge::create(array(
-    "amount" => 1000, // amount in cents, again
-    "currency" => "eur",
-    "source" => $token,
-    "description" => "Example charge")
-    );
-    echo 'striped';
-    } catch(\Stripe\Error\Card $e) {
-    echo $e;// The card has been declined
-    }
-     *
-     */
-
     private function setStripeApiKey() {
         if (get_option($this->gateway.'_mode') == 'live') {
             $key = get_option($this->gateway.'_live_secret_key');
         } else {
             $key = get_option($this->gateway.'_test_secret_key');
         }
-        //error_log('key '.$key);
-
         \Stripe\Stripe::setApiKey($key);
     }
 
@@ -170,10 +139,19 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                     'email' => $email
                 )
             );
+
+            // https://stripe.com/blog/unifying-payment-types-in-the-api
             $stripe_customer_id=$stripe_customer->id;
             update_user_meta( $bhaa_id, 'stripe_customer_id', $stripe_customer_id );
+            //error_log('$stripe_customer_id '.$stripe_customer_id);
+
+            // http://stackoverflow.com/questions/29393338/php-issue-with-stripe-api-create-card
+            //$customer = \Stripe\Customer::retrieve($stripe_customer_id);
+            //$card = $customer->sources->create(array("source" => $token));
+            //error_log('card '.$card->id);
         }
         error_log('getStripeCustomer() '.$bhaa_id.' '.$displayname.' '.$email.' '.$stripe_customer_id);
+        //EM_Pro::log('getStripeCustomer() '.$bhaa_id.' '.$displayname.' '.$email.' '.$stripe_customer_id,$this->gateway);
         return $stripe_customer_id;
     }
 
@@ -192,6 +170,9 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         $user_id = $current_user->ID; //logged in user's ID
         $token = $_REQUEST['stripeToken'];
 
+        error_log('$token :: '.$token);
+        //EM_Pro::log('token '.$token,'em_pro_stripe_token');
+
         $customerStripeToken = $this->getStripeCustomer($user_id,$token,$current_user->display_name,$current_user->user_email);
 
         try {
@@ -206,38 +187,35 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $charge = \Stripe\Charge::create(array(
                 'amount' => $amount*100,
                 'currency' => 'eur',//get_option('dbem_bookings_currency', 'USD'),
+                //'source'=>$token, // http://stackoverflow.com/questions/31306967/stripe-verify-card-and-only-charge-it-after-an-action
                 'customer' => $customerStripeToken,
                 'description' => $booking_description,
                 'metadata' => array("booking_id" => $booking_id, "event_name" => $booking_description),
                 'statement_descriptor' => "BHAA",
-                'receipt_email' => get_userdata($user_id)->user_email
+                'receipt_email' => $current_user->user_email
             ));
-
-//            if($this->debug=='yes'){
-//                EM_Pro::log(sprintf( __( 'Return Response from Stripe: %s', 'emp_stripe'),print_r($charge,true)));
-//            }
 
             if($token !=''){
                 if ($charge->paid == true) {
-                    if($this->debug=='yes') {
-                        EM_Pro::log(sprintf( __( 'Payment Received...', 'emp_stripe' )));
-                    }
+                    //if($this->debug=='yes') {
+                        error_log(sprintf( __( 'Payment Received...', 'emp_stripe' )),$this->gateway);
+                    //}
                     $EM_Booking->booking_meta[$this->gateway] = array('txn_id'=>$charge->id, 'amount' => $amount);
                     $this->record_transaction($EM_Booking, $amount, get_option('dbem_bookings_currency', 'USD'), date('Y-m-d H:i:s', current_time('timestamp')), $charge->id, 'Completed', '');
                     $result = true;
                 } else {
-                    if($this->debug=='yes'){
-                        EM_Pro::log(sprintf( __( 'Stripe payment failed. Payment declined.', 'emp_stripe' )));
-                    }
+                    //if($this->debug=='yes'){
+                        error_log(sprintf( __( 'Stripe payment failed. Payment declined.', 'emp_stripe' )));
+                    //}
                     $EM_Booking->add_error('Stripe payment failed. Payment declined.');
                     $result =  false;
                 }
             }
             else
             {
-                if($this->debug=='yes'){
-                    EM_Pro::log(sprintf( __( 'Stripe payment failed. Payment declined. Please Check your Admin settings', 'emp_stripe' )));
-                }
+                //if($this->debug=='yes'){
+                    error_log(sprintf( __( 'Stripe payment failed. Payment declined. Please Check your Admin settings', 'emp_stripe' )));
+                //}
                 $EM_Booking->add_error('Stripe payment failed. Payment declined. Please Check your Admin settings');
             }
             //Return transaction_id or false
@@ -268,7 +246,6 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
      *  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
      */
     public function em_pro_stripe_token_enqueue_scripts() {
-        //error_log('em_pro_stripe_token_enqueue_scripts');
         /*
          * Stripe
          */
@@ -277,16 +254,11 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
 			'https://js.stripe.com/v2/');
 		wp_enqueue_script('stripe');
 
-        //this->em_pro_stripe_token_set_publishable_key();
-
         wp_register_script(
             'em_pro_stripe_token',
             plugins_url('js/em_pro_stripe_token.js',__FILE__)
             ,array('jquery')
         );
-////            array('jquery','jquery-ui-datepicker'));
-//            //'1.0.0',
-//            //false);
         wp_enqueue_script('em_pro_stripe_token');
     }
 
