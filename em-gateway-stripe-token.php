@@ -139,19 +139,10 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                     'email' => $email
                 )
             );
-
-            // https://stripe.com/blog/unifying-payment-types-in-the-api
             $stripe_customer_id=$stripe_customer->id;
             update_user_meta( $bhaa_id, 'stripe_customer_id', $stripe_customer_id );
-            //error_log('$stripe_customer_id '.$stripe_customer_id);
-
-            // http://stackoverflow.com/questions/29393338/php-issue-with-stripe-api-create-card
-            //$customer = \Stripe\Customer::retrieve($stripe_customer_id);
-            //$card = $customer->sources->create(array("source" => $token));
-            //error_log('card '.$card->id);
         }
         error_log('getStripeCustomer() '.$bhaa_id.' '.$displayname.' '.$email.' '.$stripe_customer_id);
-        //EM_Pro::log('getStripeCustomer() '.$bhaa_id.' '.$displayname.' '.$email.' '.$stripe_customer_id,$this->gateway);
         return $stripe_customer_id;
     }
 
@@ -170,12 +161,13 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         $user_id = $current_user->ID; //logged in user's ID
         $token = $_REQUEST['stripeToken'];
 
+        error_log('$current_user->user_email :: '.$current_user->user_email);
         error_log('$token :: '.$token);
-        //EM_Pro::log('token '.$token,'em_pro_stripe_token');
 
-        $customerStripeToken = $this->getStripeCustomer($user_id,$token,$current_user->display_name,$current_user->user_email);
-
+        $charge ='';
         try {
+
+            $customerStripeToken = $this->getStripeCustomer($user_id,$token,$current_user->display_name,$current_user->user_email);
 
             $amount = $EM_Booking->get_price(false, false, true);
 
@@ -186,45 +178,64 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             // https://stripe.com/docs/api?lang=php#create_charge
             $charge = \Stripe\Charge::create(array(
                 'amount' => $amount*100,
-                'currency' => 'eur',//get_option('dbem_bookings_currency', 'USD'),
-                //'source'=>$token, // http://stackoverflow.com/questions/31306967/stripe-verify-card-and-only-charge-it-after-an-action
-                'customer' => $customerStripeToken,
-                'description' => $booking_description,
-                'metadata' => array("booking_id" => $booking_id, "event_name" => $booking_description),
+                'currency' => 'eur',
+                'source' => $token,
+                'description' => 'BHAA '.$booking_description,
+                'metadata' => array(
+                    "booking_id" => $booking_id,
+                    "event_name" => $booking_description,
+                    'email' => $current_user->user_email,
+                    'fee' => $amount),
                 'statement_descriptor' => "BHAA",
                 'receipt_email' => $current_user->user_email
             ));
 
-            if($token !=''){
-                if ($charge->paid == true) {
-                    //if($this->debug=='yes') {
-                        error_log(sprintf( __( 'Payment Received...', 'emp_stripe' )),$this->gateway);
-                    //}
-                    $EM_Booking->booking_meta[$this->gateway] = array('txn_id'=>$charge->id, 'amount' => $amount);
-                    $this->record_transaction($EM_Booking, $amount, get_option('dbem_bookings_currency', 'USD'), date('Y-m-d H:i:s', current_time('timestamp')), $charge->id, 'Completed', '');
-                    $result = true;
-                } else {
-                    //if($this->debug=='yes'){
-                        error_log(sprintf( __( 'Stripe payment failed. Payment declined.', 'emp_stripe' )));
-                    //}
-                    $EM_Booking->add_error('Stripe payment failed. Payment declined.');
-                    $result =  false;
-                }
-            }
-            else
-            {
-                //if($this->debug=='yes'){
-                    error_log(sprintf( __( 'Stripe payment failed. Payment declined. Please Check your Admin settings', 'emp_stripe' )));
-                //}
-                $EM_Booking->add_error('Stripe payment failed. Payment declined. Please Check your Admin settings');
-            }
-            //Return transaction_id or false
-            return apply_filters('em_gateway_stripe_capture', $result, $EM_Booking, $this);
-        }catch(\Stripe\Error\Card $e) {
-            error_log($e);// The card has been declined
-            $EM_Booking->add_error(__('Connection error:', 'em-pro') . ': "' . $e->getMessage() . '"');
+        } catch(\Stripe\Error\Card $e) {
+            error_log( $body = $e->getJsonBody());// The card has been declined
+            $err  = $body['error'];
+            $error= 'Status is:' . $e->getHttpStatus() . "\n";
+            $error.='Type is:' . $err['type'] . "\n";
+            $error.='Code is:' . $err['code'] . "\n";
+            // param is '' in this case
+            $error.='Param is:' . $err['param'] . "\n";
+            $error.='Message is:' . $err['message'] . "\n";
+            error_log(sprintf( __( 'Stripe payment failed. Payment declined. Please Check your Admin settings'.$error, 'emp_stripe' )));
+            $EM_Booking->add_error('Stripe payment failed. Reason - '.$err['message']);
+            //$EM_Booking->add_error(__('Connection error:', 'em-pro') . ': "' . $e->getMessage() . '"');
             return false;
+        } catch (\Stripe\Error\InvalidRequest $e) {
+            // Invalid parameters were supplied to Stripe's API
+            error_log( $e->getJsonBody());
+        } catch (\Stripe\Error\Authentication $e) {
+            // Authentication with Stripe's API failed
+            // (maybe you changed API keys recently)
+            error_log( $e->getJsonBody());
+        } catch (\Stripe\Error\ApiConnection $e) {
+            // Network communication with Stripe failed
+            error_log( $e->getJsonBody());
+        } catch (\Stripe\Error\Base $e) {
+            // Display a very generic error to the user, and maybe send
+            // yourself an email
+            error_log( $e->getJsonBody());
+        } catch (Exception $e) {
+            // Something else happened, completely unrelated to Stripe
+            error_log($e);
         }
+
+        if ($charge->paid == true) {
+            $EM_Booking->booking_meta[$this->gateway] = array('txn_id'=>$charge->id, 'amount' => $amount);
+            $this->record_transaction($EM_Booking, $amount, get_option('dbem_bookings_currency', 'USD'),
+                date('Y-m-d H:i:s', current_time('timestamp')), $charge->id, 'Completed', '');
+            $result = true;
+        } else {
+            error_log('Stripe payment failed. Payment declined.');
+            $EM_Booking->add_error('Stripe payment failed. Payment declined.');
+            $result =  false;
+        }
+
+        $EM_Booking->get_person()->user_email = $current_user->user_email;
+        //Return transaction_id or false
+        return apply_filters('em_gateway_stripe_capture', $result, $EM_Booking, $this);
     }
 
     /**
