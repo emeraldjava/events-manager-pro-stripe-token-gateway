@@ -129,6 +129,10 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
      */
     private function getStripeCustomer($bhaa_id,$token,$displayname,$email) {
         $stripe_customer_id = get_user_meta( $bhaa_id,'stripe_customer_id', true );
+        if($bhaa_id==0) {
+            return 'bhaa id cannot be 0';
+        }
+
         // if we have no stripe token saved
         if(!$stripe_customer_id) {
             // create a new customer if our current user doesn't have one
@@ -141,6 +145,14 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             );
             $stripe_customer_id=$stripe_customer->id;
             update_user_meta( $bhaa_id, 'stripe_customer_id', $stripe_customer_id );
+        } else {
+            $customer = \Stripe\Customer::retrieve($stripe_customer_id);
+            $new_card = $customer->sources->create(array("source" => $token));
+
+            // http://stackoverflow.com/questions/31627961/stripe-change-credit-card-number
+            // set the default card
+            $customer->default_source = $new_card->id;
+            $customer->save();
         }
         error_log('getStripeCustomer() '.$bhaa_id.' '.$displayname.' '.$email.' '.$stripe_customer_id);
         return $stripe_customer_id;
@@ -179,7 +191,8 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $charge = \Stripe\Charge::create(array(
                 'amount' => $amount*100,
                 'currency' => 'eur',
-                'source' => $token,
+                'customer' => $customerStripeToken,
+                //'source' => $token,
                 'description' => 'BHAA '.$booking_description,
                 'metadata' => array(
                     "booking_id" => $booking_id,

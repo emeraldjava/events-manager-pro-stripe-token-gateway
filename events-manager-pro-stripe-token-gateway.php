@@ -3,7 +3,7 @@
 Plugin Name:	 	Events Manager Pro - Stripe Token Gateway
 Plugin URI: 		https://github.com/emeraldjava/bhaawp
 Description: 		Events Manager Pro - Stripe Token Gateway
-Version:          	2015.12.18
+Version:          	2015.12.22
 Author: 			paul.t.oconnell@gmail.com
 Author URI: 		https://github.com/emeraldjava
 Text Domain:      	bhaawp
