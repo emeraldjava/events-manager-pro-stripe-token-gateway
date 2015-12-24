@@ -27,7 +27,7 @@
         <th scope="row"><?php _e('Mode', 'em-pro'); ?></th>
         <td>
             <select name="_mode">
-                <?php $selected = get_option('em_'.$this->gateway.'_mode'); ?>
+                <?php $selected = get_option($this->gateway.'_mode'); ?>
                 <option value="test" <?php echo ($selected == 'test') ? 'selected="selected"':''; ?>><?php _e('Test','emp-pro'); ?></option>
                 <option value="live" <?php echo ($selected == 'live') ? 'selected="selected"':''; ?>><?php _e('Live','emp-pro'); ?></option>
             </select>
