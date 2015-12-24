@@ -1,16 +1,16 @@
 <?php
 /*
 Plugin Name:	 	Events Manager Pro - Stripe Token Gateway
-Plugin URI: 		https://github.com/emeraldjava/bhaawp
-Description: 		Events Manager Pro - Stripe Token Gateway
-Version:          	2015.12.22
+Plugin URI: 		https://github.com/emeraldjava/events-manager-pro-stripe-token-gateway
+Description: 		Payment gateway for Stripe, which uses a front-end token.
+Version:          	2015.12.24
 Author: 			paul.t.oconnell@gmail.com
 Author URI: 		https://github.com/emeraldjava
-Text Domain:      	bhaawp
+Text Domain:      	events-manager-pro-stripe-token-gateway
 License:          	GPL-2.0+
 License URI:      	http://www.gnu.org/licenses/gpl-2.0.txt
 Domain Path:      	/languages
-GitHub Plugin URI: https://github.com/emeraldjava/bhaawp
+GitHub Plugin URI: https://github.com/emeraldjava/events-manager-pro-stripe-token-gateway
 */
 
 // If this file is called directly, abort.
