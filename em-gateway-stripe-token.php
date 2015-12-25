@@ -16,7 +16,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
     var $status = 4;
     var $status_txt = 'Processing (Stripe)';
     var $button_enabled = false; //we can's use a button here
-    var $supports_multiple_bookings = true;
+    var $supports_multiple_bookings = false;
     var $registered_timer = 0;
 
     function __construct() {
@@ -50,7 +50,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         return $localized_array;
     }
 
-    function my_em_wp_localize_script( $vars ){
+    function my_em_wp_localize_script( $vars ) {
         //$vars['ui_css'] = '';
         return $vars;
     }
@@ -58,12 +58,11 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
     public function booking_add($EM_Event,$EM_Booking, $post_validation = false){
         $this->registered_timer = current_time('timestamp', 1);
         parent::booking_add($EM_Event, $EM_Booking, $post_validation);
-
         if ( $post_validation && empty($EM_Booking->booking_id) ) {
             if ( get_option('dbem_multiple_bookings') && get_class($EM_Booking) == 'EM_Multiple_Booking' ) {
-                add_filter( 'em_multiple_booking_save', array( &$this, 'em_booking_save' ), 2, 2 );
+                add_filter( 'em_multiple_booking_save', array( &$this, 'bhaa_em_booking_save' ), 2, 2 );
             } else {
-                add_filter( 'em_booking_save', array( &$this, 'em_booking_save' ), 2, 2 );
+                add_filter( 'em_booking_save', array( &$this, 'bhaa_em_booking_save' ), 2, 2 );
             }
         }
     }
@@ -73,7 +72,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
      * @param $EM_Booking
      * @return bool
      */
-    public function em_booking_save($result, $EM_Booking) {
+    public function bhaa_em_booking_save($result, $EM_Booking) {
         global $wpdb, $wp_rewrite, $EM_Notices;
 
         //make sure booking save was successful before we try anything
@@ -106,6 +105,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                             $EM_Notices->notices['confirms'] = array();
                         }
                     }
+                    error_log('deleting booking '.json_encode($EM_Booking->person_id));
                     $EM_Booking->delete();
                     return false;
                 }
@@ -163,29 +163,41 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
      * https://pippinsplugins.com/stripe-integration-part-7-creating-and-storing-customers/
      */
     private function processStripePayment($EM_Booking) {
-        global $EM_Notices;
+        global $EM_Booking;
         global $current_user;
 
         $this->setStripeApiKey();
-
-        /* check if account has customer token already, if not then create one */
-        get_currentuserinfo();
-        $user_id = $current_user->ID; //logged in user's ID
         $token = $_REQUEST['stripeToken'];
-
-        error_log('$current_user->user_email :: '.$current_user->user_email);
-        error_log('$token :: '.$token);
+        error_log('Start token :: '.$token);
+        error_log('$EM_Booking->booking_id :: '.$EM_Booking->booking_id);
+        $booking_id = isset($EM_Booking->booking_id)?$EM_Booking->booking_id:0;
 
         $charge ='';
         try {
 
-            $customerStripeToken = $this->getStripeCustomer($user_id,$token,$current_user->display_name,$current_user->user_email);
+            // get the current user
+            get_currentuserinfo();
+            if($current_user->ID!=0) {
+                // existing bhaa user
+                $user_id = $current_user->ID;
+                $email = $current_user->user_email;
+                $name = $current_user->display_name;
+                $type = 'Existing';
+            } else {
+                // new member
+                $user_id = $EM_Booking->person_id;
+                $email = $EM_Booking->person->user_email;
+                $name = $EM_Booking->person->user_email;
+                $type = 'New';
+            }
+            error_log(sprintf('%s user, email %s, ID %s',$type, $email, $user_id));
 
+            $customerStripeToken = $this->getStripeCustomer($user_id,$token,$name,$email);
             $amount = $EM_Booking->get_price(false, false, true);
 
             //Order Info
             $booking_id = $EM_Booking->booking_id;
-            $booking_description = preg_replace('/[^a-zA-Z0-9\s]/i', "", $EM_Booking->get_event()->event_name); //clean event name
+            $booking_description = preg_replace('/[^a-zA-Z0-9\s]/i', "", $EM_Booking->get_event()->event_name);
 
             // https://stripe.com/docs/api?lang=php#create_charge
             $charge = \Stripe\Charge::create(array(
@@ -195,18 +207,19 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                 //'source' => $token,
                 'description' => 'BHAA '.$booking_description,
                 'metadata' => array(
-                    "booking_id" => $booking_id,
-                    "event_name" => $booking_description,
-                    'email' => $current_user->user_email,
+                    'booking_id' => $booking_id,
+                    'bhaa'=>$user_id,
+                    'event_name' => $booking_description,
+                    'email' => $email,
                     'fee' => $amount),
                 'statement_descriptor' => "BHAA",
-                'receipt_email' => $current_user->user_email
+                'receipt_email' => $email
             ));
 
         } catch(\Stripe\Error\Card $e) {
             error_log( $body = $e->getJsonBody());// The card has been declined
             $err  = $body['error'];
-            $error= 'Status is:' . $e->getHttpStatus() . "\n";
+            $error= '';//Status is:' . $e->getHttpStatus() . "\n";
             $error.='Type is:' . $err['type'] . "\n";
             $error.='Code is:' . $err['code'] . "\n";
             // param is '' in this case
@@ -218,7 +231,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             return false;
         } catch (\Stripe\Error\InvalidRequest $e) {
             // Invalid parameters were supplied to Stripe's API
-            error_log( $e->getJsonBody());
+            error_log( $e );
         } catch (\Stripe\Error\Authentication $e) {
             // Authentication with Stripe's API failed
             // (maybe you changed API keys recently)
@@ -239,13 +252,34 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $EM_Booking->booking_meta[$this->gateway] = array('txn_id'=>$charge->id, 'amount' => $amount);
             $this->record_transaction($EM_Booking, $amount, get_option('dbem_bookings_currency', 'USD'),
                 date('Y-m-d H:i:s', current_time('timestamp')), $charge->id, 'Completed', '');
+
+            $EM_Booking->get_tickets();
+            //$EM_Booking = new EM_Booking($booking_id);
+            // based on the ticket set the
+            foreach($EM_Booking->tickets as $ticket){
+                switch(strtolower($ticket->ticket_name)) {
+                    case "annual membership":
+                        //process membership
+                        $status_res = update_user_meta( $user_id, "bhaa_runner_status", "M");
+                        error_log('End Annual Membership - bhaa_runner_status='.$user_id.':'.$status_res);
+                        $timestamp = date('Y-m-d');
+                        $date_res = update_user_meta( $user_id, "bhaa_runner_dateofrenewal", $timestamp);
+                        //error_log('End Annual membership - bhaa_runner_dateofrenewal='.$timestamp.':'.$date_res);
+                        break;
+                    case "day member ticket":
+                        $status_res = update_user_meta( $user_id, "bhaa_runner_status", "D");
+                        error_log('End Day Member bhaa_runner_status='.$user_id.':'.$status_res);
+                    default:
+                        error_log($ticket->ticket_name);
+                        break;
+                }
+            }
             $result = true;
         } else {
             error_log('Stripe payment failed. Payment declined.');
             $EM_Booking->add_error('Stripe payment failed. Payment declined.');
             $result =  false;
         }
-
         $EM_Booking->get_person()->user_email = $current_user->user_email;
         //Return transaction_id or false
         return apply_filters('em_gateway_stripe_capture', $result, $EM_Booking, $this);
@@ -314,14 +348,14 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $this->gateway . "_test_publishable_key" => $_REQUEST[ '_test_publishable_key' ],
             $this->gateway . "_test_secret_key" => $_REQUEST[ '_test_secret_key' ],
             $this->gateway . "_live_publishable_key" => $_REQUEST[ '_live_publishable_key' ],
-            $this->gateway . "_live_secret_key" => ($_REQUEST[ '_live_secret_key' ])
-            //$this->gateway . "_email_customer" => ($_REQUEST[ '_email_customer' ]),
-            //$this->gateway . "_header_email_receipt" => $_REQUEST[ '_header_email_receipt' ],
-            //$this->gateway . "_footer_email_receipt" => $_REQUEST[ '_footer_email_receipt' ],
-            //$this->gateway . "_manual_approval" => $_REQUEST[ '_manual_approval' ],
-            //$this->gateway . "_booking_feedback" => wp_kses_data($_REQUEST[ '_booking_feedback' ]),
-            //$this->gateway . "_booking_feedback_free" => wp_kses_data($_REQUEST[ '_booking_feedback_free' ]),
-            //$this->gateway . "_debug" => $_REQUEST['_debug' ]
+            $this->gateway . "_live_secret_key" => $_REQUEST[ '_live_secret_key' ],
+            $this->gateway . "_email_customer" => $_REQUEST[ '_email_customer' ],
+            $this->gateway . "_header_email_receipt" => $_REQUEST[ '_header_email_receipt' ],
+            $this->gateway . "_footer_email_receipt" => $_REQUEST[ '_footer_email_receipt' ],
+            $this->gateway . "_manual_approval" => $_REQUEST[ '_manual_approval' ],
+            $this->gateway . "_booking_feedback" => wp_kses_data($_REQUEST[ '_booking_feedback' ]),
+            $this->gateway . "_booking_feedback_free" => wp_kses_data($_REQUEST[ '_booking_feedback_free' ]),
+            $this->gateway . "_debug" => $_REQUEST['_debug' ]
         );
         foreach($gateway_options as $key=>$option){
             update_option($key,stripslashes($option));
