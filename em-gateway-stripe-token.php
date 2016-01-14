@@ -28,11 +28,11 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                 || (get_option('em_' . $this->gateway . '_mode') == 'live')
             ) {
                 /* modify booking script, force SSL for all */
-                add_filter('em_wp_localize_script', array($this, 'my_em_wp_localize_script'), 10, 1);
                 add_filter('em_booking_form_action_url', array($this, 'force_ssl'), 10, 1);
             }
             add_action('wp_head',array($this,'em_pro_stripe_token_set_publishable_key'));
             add_action('wp_enqueue_scripts',array($this,'em_pro_stripe_token_enqueue_scripts'));
+            add_action('wp_enqueue_scripts',array($this,'em_pro_stripe_token_enqueue_style'));
             //add_action('em_gateway_js', array(&$this,'em_gateway_js'));
         }
     }
@@ -48,11 +48,6 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         if ( ! is_admin() )
             $localized_array['ajaxurl'] = $this->force_ssl($localized_array['ajaxurl']);
         return $localized_array;
-    }
-
-    function my_em_wp_localize_script( $vars ) {
-        //$vars['ui_css'] = '';
-        return $vars;
     }
 
     public function booking_add($EM_Event,$EM_Booking, $post_validation = false){
@@ -294,7 +289,6 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
         } else {
             $key = get_option($this->gateway.'_test_publishable_key');
         }
-        //error_log('em_pro_stripe_token_set_publishable_key() '.$key);
         echo "<!-- Stripe --><script type='text/javascript'>Stripe.setPublishableKey('$key');</script>";
     }
 
@@ -312,12 +306,30 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
 			'https://js.stripe.com/v2/');
 		wp_enqueue_script('stripe');
 
+        // http://bootsnipp.com/snippets/featured/credit-card-payment-with-stripe
+        wp_register_script(
+            'jquery.validate',
+            'https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.13.1/jquery.validate.min.js');
+        wp_enqueue_script('jquery.validate');
+
+//        wp_register_script(
+//            'jquery.payment',
+//            'https://cdnjs.cloudflare.com/ajax/libs/jquery.payment/1.2.3/jquery.payment.min.js');
+//        wp_enqueue_script('jquery.payment');
+
         wp_register_script(
             'em_pro_stripe_token',
             plugins_url('js/em_pro_stripe_token.js',__FILE__)
             ,array('jquery')
         );
         wp_enqueue_script('em_pro_stripe_token');
+    }
+
+    public function em_pro_stripe_token_enqueue_style() {
+        wp_enqueue_style(
+            'em_pro_stripe_token',
+            plugins_url('css/em_pro_stripe_token.css',__FILE__),
+            false);
     }
 
     /**

@@ -1,29 +1,21 @@
-<div class="form-row">
-    <label><?php _e('Card Number', 'em-pro'); ?></label>
-    <input type="text" size="15" value="" class="input" data-stripe="number"/>
+<div class="form-inline">
+    <label><span>Card Number *</span></label>
+    <input type="text" style="width:20em" maxlength="16" data-stripe="number" name="stripe_number"/>
 </div>
-<div class="form-row">
-    <label><?php _e('Expiration Date', 'em-pro'); ?></label>
-      <span class="expire_date" style="width:150px; display:inline;">
-      <select data-stripe="exp-month" size="2" style="width:50px; display:inline;" value="">
-              <?php
-              for ($i = 1; $i <= 12; $i++) {
-                  $m = $i > 9 ? $i : "0$i";
-                  echo "<option>$m</option>";
-              }
-              ?>
-          </select> /
-      <select data-stripe="exp-year" size="4" style="width:100px; display:inline;" value="">
-          <?php
-          $year = date('Y', current_time('timestamp'));
-          for ($i = $year; $i <= $year + 5; $i++) {
-              echo "<option>$i</option>";
-          }
-          ?>
-      </select>
-      </span>
+<div class="form-inline">
+    <div class="form-group" style="width: 100%">
+        <label><span>Exp Month *</span></label>
+        <input type="text" style="width:4em" class="form-control" maxlength="2" data-stripe="exp-month" name="stripe_exp_month" placeholder="MM"/>
+    </div>
+    </div>
+<div class="form-inline">
+    <div class="form-group" style="width: 100%">
+        <label for="input2"><span>Year *</span></label>
+        <input type="text" style="width:4em" class="form-control" maxlength="4" data-stripe="exp-year" name="stripe_exp_year" placeholder="YYYY"/>
+    </div>
 </div>
-<div class="form-row">
-    <label><?php _e('CCV', 'em-pro'); ?></label>
-    <input type="text" size="4" value="" class="input" data-stripe="cvc"/>
+<div class="form-inline">
+    <label><span><?php _e('CCV *', 'em-pro');?></label></span></label>
+    <input type="text" maxlength="4" style="width:4em" data-stripe="cvc" name="stripe_cvc" placeholder="CVC"/>
 </div>
+<br/>

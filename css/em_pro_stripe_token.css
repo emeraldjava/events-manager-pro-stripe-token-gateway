@@ -1,0 +1,9 @@
+/*!
+ * Style the validation error element
+ */
+#em-booking-form, label.error {
+    color: #ED7476;
+    font:10px Tahoma,sans-serif;
+    margin-left:1px;
+    display:inline;
+}

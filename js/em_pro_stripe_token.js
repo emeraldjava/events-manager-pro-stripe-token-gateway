@@ -1,44 +1,70 @@
 jQuery(document).ready(function($) {
 
     /**
+     * Validation of the credit card
+     * http://bootsnipp.com/snippets/featured/credit-card-payment-with-stripe
+     * https://www.wpkb.com/how-to-code-your-own-wordpress-contact-form-with-jquery-validation/
+     */
+    $(".em-booking-form").validate({
+        debug: true,
+        rules: {
+            stripe_number: { required: true, digits: true, minlength: 16 },
+            stripe_exp_month: { required: true, digits: true, minlength: 2 },
+            stripe_exp_year: { required: true, digits: true, minlength: 4 },
+            stripe_cvc: { required: true, digits: true, minlength: 3 }
+        },
+        messages: {
+            stripe_number: "Invalid Card Number",
+            stripe_exp_month: "Invalid Card Month",
+            stripe_exp_year: "Invalid Card Year",
+            stripe_cvc: "Invalid CVC"
+        }
+    });
+
+    /**
      * https://pippinsplugins.com/stripe-integration-part-1-building-the-settings-and-a-simple-payment-form/
      * v17.12.15 - 9.55
      * Generate the stripe token on form submit
      */
     $('.em-booking-form').submit(function(event) {
 
-        console.log('form submitted');
+        //$(".em-booking-form").valid();
+        var cc = $('.stripe_number').val();
+        console.log('cc number '.cc);
 
-        var $inputs = $('.em-booking-form :input');
+        if($(".em-booking-form").valid()){   // test for validity
+            console.log('form submitted');
+            // do stuff if form is valid
 
-        // not sure if you wanted this, but I thought I'd add it.
-        // get an associative array of just the values.
-        var values = {};
-        $inputs.each(function() {
-            values[this.name] = $(this).val();
-        });
-        console.log(values);
+            // Print inoput values
+            var $inputs = $('.em-booking-form :input');
+            var values = {};
+            $inputs.each(function() {
+                values[this.name] = $(this).val();
+            });
+            console.log(values);
 
-        var $form = $(this);
+            var $form = $(this);
 
-        //var $form = $(this);//$('.em-booking-form');
-        //console.log('get form '.$form);
+            // Disable the submit button to prevent repeated clicks
+            $('.em-booking-submit').prop('disabled', true);
+            //console.log('disable button');
 
-        // Disable the submit button to prevent repeated clicks
-        $('.em-booking-submit').prop('disabled', true);
-        console.log('disable button');
+            Stripe.card.createToken($form, stripeResponseHandler);
+            //console.log('create token - return false');
 
+            // Prevent the form from submitting with the default action
+            //$('.em-booking-submit').prop('disabled', false);
+            //console.log('enable button');
 
-        Stripe.card.createToken($form, stripeResponseHandler);
-        //console.log('create token - return false');
-
-        // Prevent the form from submitting with the default action
-        //$('.em-booking-submit').prop('disabled', false);
-        //console.log('enable button');
-
-        return false;
+            return false;
+        }
+        //else {
+        //    // do stuff if form is not valid
+        //    console.log('form has invalid values');
+        //    return false;
+        //}
     });
-
 
     function stripeResponseHandler(status, response) {
         console.log('stripeResponseHandler');
