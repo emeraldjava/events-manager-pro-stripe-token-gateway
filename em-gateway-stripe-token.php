@@ -134,7 +134,9 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
             $stripe_customer = \Stripe\Customer::create(array(
                     'source' => $token,
                     'description' => $displayname,
-                    'metadata' => array('BHAA_ID'=>$bhaa_id),
+                    'metadata' => array(
+                        'bhaa_id'=>$bhaa_id,
+                        'name'==>$displayname),
                     'email' => $email
                 )
             );
@@ -182,6 +184,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                 // new member
                 $user_id = $EM_Booking->person_id;
                 $email = $EM_Booking->person->user_email;
+                // can we get the display_name here
                 $name = $EM_Booking->person->user_email;
                 $type = 'New';
             }
@@ -203,7 +206,7 @@ class EM_Gateway_Stripe_Token extends EM_Gateway {
                 'description' => 'BHAA '.$booking_description,
                 'metadata' => array(
                     'booking_id' => $booking_id,
-                    'bhaa'=>$user_id,
+                    'bhaa_id'=>$user_id,
                     'event_name' => $booking_description,
                     'email' => $email,
                     'fee' => $amount),
