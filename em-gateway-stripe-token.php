@@ -1,11 +1,6 @@
 <?php
 /**
- * Events Manager Pro - Stripe Token Gateway
- * @package   EM_Gateway_Stripe_Token
- * @author    Paul O'Connell <paul.t.oconnell@gmail.com>
- * @license   GPL-2.0+
- * Date: 18/12/15
- * Time: 13:34
+ * EM_Gateway_Stripe_Token
  */
 require_once('vendor/autoload.php');
 

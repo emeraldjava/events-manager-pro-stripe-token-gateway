@@ -1,21 +1,3 @@
-<table class="form-table">
-    <tbody>
-    <tr valign="top">
-        <th scope="row"><?php _e('Success Message', 'em-pro') ?></th>
-        <td>
-            <input type="text" name="_booking_feedback" value="<?php esc_attr_e(get_option($this->gateway . "_booking_feedback" )); ?>" style='width: 40em;' /><br />
-            <em><?php _e('The message that is shown to a user when a booking is successful and payment has been taken.','em-pro'); ?></em>
-        </td>
-    </tr>
-    <tr valign="top">
-        <th scope="row"><?php _e('Success Free Message', 'em-pro') ?></th>
-        <td>
-            <input type="text" name="_booking_feedback_free" value="<?php esc_attr_e(get_option($this->gateway . "_booking_feedback_free" )); ?>" style='width: 40em;' /><br />
-            <em><?php _e('If some cases if you allow a free ticket (e.g. pay at gate) as well as paid tickets, this message will be shown and the user will not be charged.','em-pro'); ?></em>
-        </td>
-    </tr>
-    </tbody>
-</table>
 <h3><?php echo sprintf(__('%s Options','dbem'),'Stripe')?></h3>
 <table class="form-table">
     <tbody>
