@@ -5,21 +5,21 @@ jQuery(document).ready(function($) {
      * http://bootsnipp.com/snippets/featured/credit-card-payment-with-stripe
      * https://www.wpkb.com/how-to-code-your-own-wordpress-contact-form-with-jquery-validation/
      */
-    //$(".em-booking-form").validate({
-    //    debug: true,
-    //    rules: {
-    //        stripe_number: { required: true, digits: true, minlength: 16 },
-    //        stripe_exp_month: { required: true, digits: true, minlength: 2 },
-    //        stripe_exp_year: { required: true, digits: true, minlength: 4 },
-    //        stripe_cvc: { required: true, digits: true, minlength: 3 }
-    //    },
-    //    messages: {
-    //        stripe_number: "Invalid Card Number",
-    //        stripe_exp_month: "Invalid Card Month",
-    //        stripe_exp_year: "Invalid Card Year",
-    //        stripe_cvc: "Invalid CVC"
-    //    }
-    //});
+    /*$(".em-booking-form").validate({
+        debug: true,
+        rules: {
+            stripe_number: { required: true, digits: true, minlength: 16 },
+            stripe_exp_month: { required: true, digits: true, minlength: 2 },
+            stripe_exp_year: { required: true, digits: true, minlength: 4 },
+            stripe_cvc: { required: true, digits: true, minlength: 3 }
+        },
+        messages: {
+            stripe_number: "Invalid Card Number",
+            stripe_exp_month: "Invalid Card Month",
+            stripe_exp_year: "Invalid Card Year",
+            stripe_cvc: "Invalid CVC"
+        }
+    });*/
 
     /**
      * https://pippinsplugins.com/stripe-integration-part-1-building-the-settings-and-a-simple-payment-form/
@@ -32,11 +32,11 @@ jQuery(document).ready(function($) {
         var cc = $('.stripe_number').val();
         //console.log('cc number '.cc);
 
-        if($(".em-booking-form").valid()){   // test for validity
+        //if($(".em-booking-form").valid()){   // test for validity
             //console.log('form submitted');
             // do stuff if form is valid
 
-            // Print inoput values
+            // Print input values
             var $inputs = $('.em-booking-form :input');
             var values = {};
             $inputs.each(function() {
@@ -58,7 +58,7 @@ jQuery(document).ready(function($) {
             //console.log('enable button');
 
             return false;
-        }
+        //}
         //else {
         //    // do stuff if form is not valid
         //    console.log('form has invalid values');
